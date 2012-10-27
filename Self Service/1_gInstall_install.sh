@@ -4,7 +4,7 @@
 # Manual URL: https://docs.google.com/a/gene.com/document/d/15Kar7Nc2_Qt5Q1KWpxsL5UNMGHu3aQrabH6zoD7dueg/edit
 #
 # Created by andrewws on 10/15/2012
-# Copyright 2012 Genentech. All rights reserved.
+
 # set -x	# DEBUG. Display commands and their arguments as they are executed
 # set -v	# VERBOSE. Display shell input lines as they are read.
 # set -n	# EVALUATE. Check syntax of the script but dont execute

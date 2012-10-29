@@ -20,6 +20,7 @@ declare -x Title="$6"
 # Name of the DMG that that will be dowloaded
 declare -x sourceName="$7"
 
+declare -x downloadStatus=""
 ## Variables defined by the script
 ####################################################################################################
 # Checks to see if the manual trigger is still active
@@ -30,6 +31,11 @@ declare -x CocoaDialog="/Applications/CocoaDialog.app/Contents/MacOS/CocoaDialog
 
 ## Function
 #################################################################################################### 
+function manualTriggerFunc () {
+	/usr/sbin/jamf policy -trigger "$manualTrigger" -verbose > /private/var/tmp/."$manualTrigger"
+
+}
+
 function downloadProgress () {
 	(
 			/usr/sbin/jamf policy -trigger "$manualTrigger" &
@@ -42,8 +48,18 @@ function downloadProgress () {
 			done 
 
 	)|$CocoaDialog progressbar --icon-file "/var/gne/gInstall/icons/globeDownload.icns" --float --title "$Title" --text "Download in progress......." --icon-height "92" --icon-width "92" --width "500" --height "132"
-	
+	policyError=`cat /private/var/tmp/."$manualTrigger" | grep "Error" | grep -v "ASR Error"`
+	if [ "$policyError" = "" ]; then
+		downloadStatus="Sucsess"
+		rm /private/var/tmp/."$manualTrigger"
+	else
+		downloadStatus="Fail"
+		rm /private/var/tmp/."$manualTrigger"
+	fi
 }
 
 downloadProgress
+
+
+echo "$downloadStatus"
 

@@ -1,27 +1,25 @@
 #!/bin/sh
 # set -x
 # Determine the OS version since the networksetup command differs on OS
-# Andrew Seago
 OS=`/usr/bin/sw_vers -productVersion | /usr/bin/colrm 5`
 
 # Attempt to read the current airport network for the current OS
 
 if [ "$OS" == "10.5" ]; then
-	SSID=`/usr/sbin/networksetup -getairportnetwork | sed 's/Current AirPort Network: //g' | grep -v "GenenAir" | grep -v "guestwlan"`
+	SSID=`/usr/sbin/networksetup -getairportnetwork | sed 's/Current AirPort Network: //g' | grep -v "GenenAir" | grep -v "guestwlan" > /private/var/tmp/.mifiCheck`
 fi
 
 if [ "$OS" == "10.6" ]; then
-	SSID=`/usr/sbin/networksetup -getairportnetwork AirPort | sed 's/Current AirPort Network: //g' | grep -v "GenenAir" | grep -v "guestwlan"`
+	SSID=`/usr/sbin/networksetup -getairportnetwork AirPort | sed 's/Current AirPort Network: //g' | grep -v "GenenAir" | grep -v "guestwlan" > /private/var/tmp/.mifiCheck`
 fi
 
 if [ "$OS" == "10.7" ] || [ "$OS" == "10.8" ]; then
 	device=`/usr/sbin/networksetup -listallhardwareports | grep -A 1 Wi-Fi | awk '/Device/{ print $2 }'` 
-	SSID=`/usr/sbin/networksetup -getairportnetwork $device | sed 's/Current Wi-Fi Network: //g' | grep -v "GenenAir" | grep -v "guestwlan"` 
+	SSID=`/usr/sbin/networksetup -getairportnetwork $device | sed 's/Current Wi-Fi Network: //g' | grep -v "GenenAir" | grep -v "guestwlan" > /private/var/tmp/.mifiCheck` 
 fi
 
 # Ensure that AirPort was found
-hasAirPort=`echo "$SSID" | grep "not"`
-
+hasAirPort=`wc /private/var/tmp/.mifiCheck | awk '{print$1}' | grep 0`
 
 if [ "$hasAirPort" = "" ]; then
 	if [ "$OS" == "10.7" ] || [ "$OS" == "10.8" ]; then

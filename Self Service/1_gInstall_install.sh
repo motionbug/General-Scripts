@@ -3,8 +3,7 @@
 #
 # Manual URL: https://docs.google.com/a/gene.com/document/d/15Kar7Nc2_Qt5Q1KWpxsL5UNMGHu3aQrabH6zoD7dueg/edit
 #
-# Created by andrewws on 10/15/2012
-
+# Created by andrewws on 05/14/2012
 # set -x	# DEBUG. Display commands and their arguments as they are executed
 # set -v	# VERBOSE. Display shell input lines as they are read.
 # set -n	# EVALUATE. Check syntax of the script but dont execute
@@ -14,7 +13,6 @@ declare -x logFile="/Library/Logs/gInstall/gInstall_install.log"
 declare -x mountPointDMG="/private/var/gne/gInstall/cache/.mountDMG"
 declare -x installStatus=""
 declare -x downloadStatus=""
-
 ## Icons
 declare -x ProcessCompleteIcon="/var/gne/gInstall/icons/ProcessComplete.icns"
 declare -x ProblemReporterIcon="/var/gne/gInstall/icons/ProblemReporter.icns"
@@ -38,7 +36,6 @@ declare -x AirDropIcon="/var/gne/gInstall/icons/AirDrop.icns"
 declare -x FileVaultIcon="/var/gne/gInstall/icons/FileVault.icns"
 declare -x appdownloadIcon="/var/gne/gInstall/icons/app-download.icns"
 declare -x PackagesIcon="/var/gne/gInstall/icons/Packages.icns"
-
 ### Policy set Variables
 declare -x pathToDMG=""
 declare -x dmgName=""
@@ -49,39 +46,50 @@ declare -x downloadTrigger=""
 declare -x postTrigger=""
 declare -x startDialog=""
 
-if [ "$pathToDMG" = "" ]; then
-	if [ "$4" = "" ]; then
-		declare -x pathToDMG="/Library/Application Support/JAMF/Waiting Room/"
-	else
-		if [ "$4" = "gInstall" ]; then
-			declare -x pathToDMG="/private/var/gne/gInstall/cache/"
-		fi
-		if [ "$4" = "JAMF" ]; then
-			declare -x pathToDMG="/Library/Application Support/JAMF/Waiting Room/"
-		fi
-	fi
-fi
 
+# dmgName is the full filename of the .dmg
 if [ "$dmgName" = "" ]; then
-	declare -x dmgName="$5"
+	declare -x dmgName="$4"
+fi
+# pathToDMG checks to see where the DMG is located and sets the appropriate path
+if [ -f "/Library/Application Support/JAMF/Waiting Room/$dmgName" ]; then
+	declare -x pathToDMG="/Library/Application Support/JAMF/Waiting Room/"
+else
+	declare -x pathToDMG="/private/var/gne/gInstall/cache/"
+fi
+# fullPathToDMG is the full path to the DMG
+declare -x fullPathToDMG="$pathToDMG$dmgName"
+# policyName is the dialog title for the policy
+if [ "$policyName" = "" ]; then
+	declare -x policyName="$5"
+fi
+# InstallType examples: 
+#	DMG (dmg file) 
+#	fut (dmg with "Fill user templates") 
+#	feu (dmg with "Fill existing users") 
+#	feu,fut (dmg with both "Fill existing users" and "Fill user templates")
+#	pkg (dmg with an installable pkg)
+if [ "$installType" = "" ]; then
+	declare -x installType="$6"
 fi
 
-declare -x fullPathToDMG="$pathToDMG$dmgName"
 
-if [ "$policyName" = "" ]; then
-	declare -x policyName="$6"
+# keyPackage is the name of the keyaccess package. MUST FOLLOW NAMING CONVENTION
+# i.e. util_keyAccess_7.0.mpkg
+if [ "$keyDMG" == "" ]; then   
+    if [ "$7" == "" ]; then
+    	keyDMG="NA"
+    else
+    	keyDMG="$7"
+    fi
 fi
 
 if [ "$startDialog" = "" ]; then
-	if [ "$7" = "" ]; then
+	if [ "$8" = "" ]; then
 		declare -x startDialog="NA"
 	else
-		declare -x startDialog="$7"
+		declare -x startDialog="$8"
 	fi
-fi
-
-if [ "$installType" = "" ]; then
-	declare -x installType="$8"
 fi
 
 if [ "$preInstallTrigger" = "" ]; then
@@ -115,13 +123,13 @@ function verify_DMG () {
 	## Verify DMG package
 	dmgVerify=`/usr/bin/hdiutil verify "$fullPathToDMG"`
 	if [ $? == 0 ]; then
-		log "Verify of $pathToDMG Complete"
+		log "Verify of $fullPathToDMG Complete"
 		exec 3>&-
 		wait
 		rm -f /tmp/hpipe
 	else
 		installStatus="FAIL"
-		log "There was an error verifying $pathToDMG Exit Code: $?"
+		log "There was an error verifying $fullPathToDMG Exit Code: $?"
 		exec 3>&-
 		wait
 		rm -f /tmp/hpipe
@@ -148,7 +156,7 @@ function cleanup () {
 			fi
 		fi
 		if [ "$installStatus" = "Complete" ]; then
-			"$CocoaDialog" msgbox --no-newline --title "$policyName" --text "$policyName Installation Complete" --informative-text "Your software has been sucsessfully installed. Please press Done to continue." --button1 "Done" --icon-file "$ProcessCompleteIcon" --float --string-output --icon-height "92" --icon-width "92"
+			"$CocoaDialog" msgbox --no-newline --title "$policyName" --text "$policyName Installation Complete" --informative-text "$policyName has been successfully installed. Please press Done to continue." --button1 "Done" --icon-file "$ProcessCompleteIcon" --float --string-output --icon-height "92" --icon-width "92"
 			log "Exiting Install"
 			exit 0
 		else
@@ -167,23 +175,23 @@ function installDMG () {
 	exec 3<> /tmp/hpipe
 	if [ "$installType" == "DMG" ]; then
 		log "$installType Install"
-		/usr/sbin/jamf install -package "$dmgName" -path $pathToDMG  -target / -progress -verbose >> $logFile
+		/usr/sbin/jamf install -package "$dmgName" -path "$pathToDMG"  -target / -progress -verbose >> $logFile
 	fi
 	
 	####	fut (dmg with "Fill user templates") Installer
 	if [ "$installType" == "fut" ]; then
 		log "$installType Install"
-		/usr/sbin/jamf install -package "$dmgName" -path $pathToDMG  -target / -progress -verbose -fut >> $logFile
+		/usr/sbin/jamf install -package "$dmgName" -path "$pathToDMG"  -target / -progress -verbose -fut >> $logFile
 	fi
 	####	feu (dmg with "Fill existing users") installer
 	if [ "$installType" == "feu" ]; then
 		log "$installType Install"
-		/usr/sbin/jamf install -package "$dmgName" -path $pathToDMG  -target / -progress -verbose -feu >> $logFile
+		/usr/sbin/jamf install -package "$dmgName" -path "$pathToDMG"  -target / -progress -verbose -feu >> $logFile
 	fi
 	####	feu,fut (dmg with both "Fill existing users" and "Fill user templates") installer
 	if [ "$installType" == "feu,fut" ]; then
 		log "$installType Install"
-		/usr/sbin/jamf install -package "$dmgName" -path $pathToDMG  -target / -progress -verbose -feu -fut >> $logFile
+		/usr/sbin/jamf install -package "$dmgName" -path "$pathToDMG"  -target / -progress -verbose -feu -fut >> $logFile
 	fi
 	if [ $? == 0 ]; then
 		exec 3>&-
@@ -215,7 +223,7 @@ function install_pkg () {
 	log "$installType Install"
 	log "Mounting $dmgName..."
 	rm "$mountPointDMG"
-	/usr/bin/hdiutil mount -nobrowse -noautoopen -noverify "$fullPathToDMG" > "$mountPointDMG"
+	/usr/bin/hdiutil mount -nobrowse -noautoopen -noverify -verbose "$fullPathToDMG" > "$mountPointDMG"
 	if [ $? == 0 ]; then
 		log "$dmgName mounted successfully"
 	else
@@ -231,7 +239,7 @@ function install_pkg () {
 			cleanup
 		fi
 	fi
-	mountVolume=`cat "$mountPointDMG" | grep /Volumes/ | cut -f 3-`
+	mountVolume=`cat "$mountPointDMG" | grep "Volumes" | cut -f 3-`
 	mountDevice=`cat "$mountPointDMG" | grep "$mountVolume" | awk '{print $1}'`
 	# Install the PKG wrapped inside the DMG
 	log "Installing Packages from mount path $mountVolume..."
@@ -263,7 +271,7 @@ function install_pkg () {
 		mkfifo /tmp/hpipe
 		$CocoaDialog progressbar --icon-file "$PackagesIcon" --float --title "$policyName" --text "Installing ${fileArray[$i]}" --icon-height "92" --icon-width "92" --width "500" --height "132" --indeterminate < /tmp/hpipe &
 		exec 3<> /tmp/hpipe
-		installer -package "$mountVolume/${fileArray[$i]}" -target / -verboseR >> $logFile
+		installer -package "$mountVolume/${fileArray[$i]}" -target / -verbose >> $logFile
 		exec 3>&-
 		wait
 		rm -f /tmp/hpipe
@@ -326,7 +334,6 @@ if [ "$preInstallTrigger" != "" ]; then
 		fi
 	fi
 fi
-
 
 if [ "$downloadTrigger" != "" ]; then
 {

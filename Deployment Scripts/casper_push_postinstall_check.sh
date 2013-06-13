@@ -1,10 +1,9 @@
 #!/bin/sh
 #	casper_push_postinstall_check.sh
-#	This script is to be used in a policy to deploy either a flat DMG package or a DMG that contains a pkg or mpkg. This verifies the DMG is valid before installing. 
-#	The packaged should be set to Cache in the policy.
-#	The script should be set to execute "After" the package has been cached.
+#	This is identical to the 1_ginstall_install.sh script however it does not have any dialog to users. 
 #
 # Created by andrewws on 05/14/2012
+
 # set -x	# DEBUG. Display commands and their arguments as they are executed
 # set -v	# VERBOSE. Display shell input lines as they are read.
 # set -n	# EVALUATE. Check syntax of the script but dont execute
@@ -49,10 +48,6 @@ fi
 if [ "$installType" = "" ]; then
 	declare -x installType="$6"
 fi
-
-
-
-
 
 # LOGGING FUNCTION
 log () {

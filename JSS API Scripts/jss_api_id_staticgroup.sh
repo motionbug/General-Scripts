@@ -79,7 +79,7 @@ function FinalizeXML () {
 
 # This uploads the $JSS_XML_INPUT file to the JSS
 function UpdateStaticGroup () {
-	curl -k -v -u "$USERNAME":"$PASSWORD" $JSS_URL/JSSResource/computergroups/id/514 -T "$JSS_XML_INPUT" -X PUT
+	curl -k -v -u "$USERNAME":"$PASSWORD" $JSS_URL/JSSResource/computergroups/id/"$STATIC_GROUP_ID" -T "$JSS_XML_INPUT" -X PUT
 	echo "$?"
 	echo "Done"
 }
